@@ -1,0 +1,10 @@
+name: MPNST_LCM_shiny
+title:
+username: hxy265
+account: hxy265
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 11895821
+bundleId: 11783331
+url: https://hxy265.shinyapps.io/MPNST_LCM_shiny/
+version: 1
