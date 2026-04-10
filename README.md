@@ -9,7 +9,6 @@ Now published at https://vanloo-lab-mpnst-lcm-shiny.share.connect.posit.cloud.
 - **LCM Spot tab** — Select a tumour region and tissue section orientation (Front/Back/Side), click individual LCM spots to view their allele-specific copy number profile and haplotype balance.
 - **LCM Region tab** — View copy number profiles of all successfully sequenced spots in a region; click a genomic segment to see its copy number state distributed spatially across all three section orientations.
 
-## Published to Posit Connect Cloud (git-backed deployment)
 
 ## App directory structure
 
