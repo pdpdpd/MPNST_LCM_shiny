@@ -414,7 +414,8 @@ server <- function(input, output, session) {
           annotation_raster(img, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
           geom_point(size = 10) +
           scale_color_manual(values = CN_states) +
-          geom_text(aes(label = asCN_plot), size = 8, nudge_x = 3, nudge_y = 3) +
+          geom_label(aes(label = asCN_plot), size = 6, nudge_x = 3, nudge_y = 3,
+                     color = "black", fill = "white", alpha = 0.75, label.size = 0.2) +
           coord_cartesian(xlim = c(0,100), ylim = c(0,100)) +
           base_theme
       }
