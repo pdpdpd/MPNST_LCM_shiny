@@ -1,11 +1,15 @@
 library(shiny)
 library(shinydashboard)
+library(shinycssloaders)
 library(jpeg)
 library(dplyr)
 library(magrittr)
 library(ggplot2)
 library(pheatmap)
 library(grid)
+
+# Increase app-level plot cache to 500 MB (default is ~200 MB)
+shinyOptions(cache = cachem::cache_mem(max_size = 500 * 1024^2))
 
 #Load metadata
 regions <- list(c("Primary", "A -Front"),
@@ -50,16 +54,27 @@ LCM_image_files <- c(
   "R4_C -Side"       = "T4.1_side_OV_cut_20x.jpg"
 )
 
+# Downsample image array to max_px on the longest side using nearest-neighbour.
+# 1200 px covers standard and 1.5x HiDPI screens; tissue photos don't benefit
+# from higher resolution since they are already blurry at the micron scale.
+resize_img <- function(img, max_px = 1200) {
+  h <- nrow(img); w <- ncol(img)
+  scale <- max_px / max(h, w)
+  if (scale >= 1) return(img)
+  img[round(seq(1, h, length.out = round(h * scale))),
+      round(seq(1, w, length.out = round(w * scale))), , drop = FALSE]
+}
+
 LCM_image_cache <- new.env(parent = emptyenv())
 
 get_LCM_image <- function(key) {
   if (is.null(LCM_image_cache[[key]])) {
-    LCM_image_cache[[key]] <- readJPEG(LCM_image_files[[key]])
+    LCM_image_cache[[key]] <- resize_img(readJPEG(LCM_image_files[[key]]))
   }
   LCM_image_cache[[key]]
 }
 
-# Pre-load all images at startup so the first render of each view is fast
+# Pre-load and downsample all images at startup
 invisible(lapply(names(LCM_image_files), get_LCM_image))
 
 CN_states <- c("0+0" = "royalblue3",
@@ -165,7 +180,7 @@ ui <- navbarPage("MPNST LCM Explorer",
                                      style = "font-size: 14px; color: #555; margin-bottom: 10px;"),
                                    fluidRow(
                                      column(width = 6,
-                                            plotOutput("LCM_plot", height = 1000, width = 1000, click = "plot1_click")
+                                            withSpinner(plotOutput("LCM_plot", height = 1000, width = 1000, click = "plot1_click"))
                                      )
                                    )
                             ),
@@ -180,7 +195,7 @@ ui <- navbarPage("MPNST LCM Explorer",
                                             p("Heatmap showing the allele-specific copy number state across the genome for the selected spot.
                                               Each column represents a genomic probe, coloured by its copy number state (major + minor allele).",
                                               style = "font-size: 13px; color: #555;"),
-                                            plotOutput("spot_CN_plot", height = 100, width = 1000),
+                                            withSpinner(plotOutput("spot_CN_plot", height = 100, width = 1000)),
                                             plotOutput("chr_scale_spot", height = 50, width = 1000),
                                             plotOutput("CN_scale_spot", height = 100, width = 1000),
                                             h4("Haplotype balance"),
@@ -188,7 +203,7 @@ ui <- navbarPage("MPNST LCM Explorer",
                                               The selected spot is highlighted. The black diagonal lines delimit the expected region for
                                               normal diploid samples \u2014 spots falling outside these lines show evidence of haplotype imbalance.",
                                               style = "font-size: 13px; color: #555;"),
-                                            plotOutput("genotype_plot", height = 800, width = 800)
+                                            withSpinner(plotOutput("genotype_plot", height = 800, width = 800))
                                      )
                                    )
                             )
@@ -206,22 +221,20 @@ ui <- navbarPage("MPNST LCM Explorer",
                                      images below will then display the copy number state at that segment for each spot, showing how it
                                      varies spatially across the tumour.",
                                      style = "font-size: 14px; color: #555; margin-bottom: 10px;"),
-                                   plotOutput("slide_CN_plot", height = 200, width = 1000,
-                                              click = "plot2_click"
-                                   ),
+                                   withSpinner(plotOutput("slide_CN_plot", height = 200, width = 1000, click = "plot2_click")),
                                    plotOutput("chr_scale_1", height = 50, width = 1000),
                                    plotOutput("CN_scale_region", height = 100, width = 1000)
                             )
                           ),
                           fluidRow(
                             column(width = 4, div(style = "font-size:20px;", strong("Front")),
-                                   plotOutput("LCM_front", height = 800, width = 800),
+                                   withSpinner(plotOutput("LCM_front", height = 800, width = 800)),
                             ),
                             column(width = 4, div(style = "font-size:20px;", strong("Side")),
-                                   plotOutput("LCM_side", height = 800, width = 800),
+                                   withSpinner(plotOutput("LCM_side", height = 800, width = 800)),
                             ),
                             column(width = 4, div(style = "font-size:20px;", strong("Back")),
-                                   plotOutput("LCM_back", height = 800, width = 800),
+                                   withSpinner(plotOutput("LCM_back", height = 800, width = 800)),
                             )
                           )
                  )
@@ -280,7 +293,7 @@ server <- function(input, output, session) {
             legend.background = element_rect(fill = alpha("white", 0.8)),
             axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(),
             axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
-  }, cacheKeyExpr = list(input$spot_region, input$spot_side), cache = "app")
+  }, cacheKeyExpr = list(input$spot_region, input$spot_side), cache = "app", res = 96)
 
   output$click_info <- renderPrint({
     pt <- clicked_spot()
@@ -292,19 +305,19 @@ server <- function(input, output, session) {
     s <- selected_sample()
     req(s %in% LCM_asCN_profile_samples$sample)
     plot_asCN(s, asCN_mtx)
-  }, cacheKeyExpr = list(selected_sample()), cache = "app")
+  }, cacheKeyExpr = list(selected_sample()), cache = "app", res = 96)
 
   # Chromosome scale: completely static — render once for the entire app lifetime
   output$chr_scale_spot <- renderCachedPlot({
     plot_chr_scale(asCN_chr_probes, asCN_mtx)
-  }, cacheKeyExpr = "chr_scale", cache = "app")
+  }, cacheKeyExpr = "chr_scale", cache = "app", res = 96)
 
   # CN colour legend: completely static
   output$CN_scale_spot <- renderCachedPlot({
     par(mar = c(1,1,1,1))
     text(barplot(rep(1, length(as_CN_colour)), col = as_CN_colour, axes = F),
          .2, as_CN_labels, 0, cex = 1, pos = 3)
-  }, cacheKeyExpr = "cn_scale", cache = "app")
+  }, cacheKeyExpr = "cn_scale", cache = "app", res = 96)
 
   # Haplotype scatter: cache by spot + region + side
   output$genotype_plot <- renderCachedPlot({
@@ -323,7 +336,7 @@ server <- function(input, output, session) {
       geom_abline(intercept = .5, slope = 1) +
       geom_abline(intercept = -.5, slope = 1) +
       theme(plot.title = element_text(size = 30), text = element_text(size = 16), aspect.ratio = 1)
-  }, cacheKeyExpr = list(selected_sample(), input$spot_region, input$spot_side), cache = "app")
+  }, cacheKeyExpr = list(selected_sample(), input$spot_region, input$spot_side), cache = "app", res = 96)
 
   ####################################################################################################################################
   #Region tab reactive values
@@ -361,17 +374,17 @@ server <- function(input, output, session) {
   # Region CN heatmap: cache by region
   output$slide_CN_plot <- renderCachedPlot({
     plot_asCN(samples_on_slide_region_reactive(), asCN_mtx)
-  }, cacheKeyExpr = list(input$region_region), cache = "app")
+  }, cacheKeyExpr = list(input$region_region), cache = "app", res = 96)
 
   output$chr_scale_1 <- renderCachedPlot({
     plot_chr_scale(asCN_chr_probes, asCN_mtx)
-  }, cacheKeyExpr = "chr_scale", cache = "app")
+  }, cacheKeyExpr = "chr_scale", cache = "app", res = 96)
 
   output$CN_scale_region <- renderCachedPlot({
     par(mar = c(1,1,1,1))
     text(barplot(rep(1, length(as_CN_colour)), col = as_CN_colour, axes = F),
          .2, as_CN_labels, 0, cex = 1, pos = 3)
-  }, cacheKeyExpr = "cn_scale", cache = "app")
+  }, cacheKeyExpr = "cn_scale", cache = "app", res = 96)
 
   # Helper: tissue section overlay for a given side, cached by region + probe + side.
   # Before any heatmap click: shows spots coloured by sequencing status so images
@@ -401,11 +414,12 @@ server <- function(input, output, session) {
           annotation_raster(img, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
           geom_point(size = 10) +
           scale_color_manual(values = CN_states) +
-          geom_text(aes(label = asCN_plot), size = 8, nudge_x = 3, nudge_y = 3) +
+          geom_label(aes(label = asCN_plot), size = 6, nudge_x = 3, nudge_y = 3,
+                     color = "black", fill = "white", alpha = 0.75, label.size = 0.2) +
           coord_cartesian(xlim = c(0,100), ylim = c(0,100)) +
           base_theme
       }
-    }, cacheKeyExpr = list(input$region_region, selected_probe(), side_label), cache = "app")
+    }, cacheKeyExpr = list(input$region_region, selected_probe(), side_label), cache = "app", res = 96)
   }
 
   output$LCM_front <- make_region_plot("A -Front")
