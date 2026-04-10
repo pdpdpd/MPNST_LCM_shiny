@@ -134,7 +134,7 @@ ui <- navbarPage("MPNST LCM Explorer",
                                        imageOutput("study_design_img", height = "auto", width = "100%")
                                    ),
                                    br(),
-                                   h4("About this app"),
+                                   h3("About this app", style = "font-weight: bold;"),
                                    p("This interactive application accompanies the study:",
                                      strong(em("Chromosomal instability drives spatial and temporal phenotypic diversity in Schwann cancer cells.")),
                                      style = "font-size: 16px;"),
@@ -175,9 +175,11 @@ ui <- navbarPage("MPNST LCM Explorer",
                                      column(width = 3, selectInput("spot_region", div(style = "font-size:20px;", strong("Region:")), choices = LCM_coordinates$region %>% unique())),
                                      column(width = 3, selectInput("spot_side", div(style = "font-size:20px;", strong("Side:")), choices = LCM_coordinates$side %>% unique()))
                                    ),
-                                   p("Select a tumour region and tissue side above, then click on an LCM spot on the image below to view
-                                     its copy number profile and haplotype information.",
-                                     style = "font-size: 14px; color: #555; margin-bottom: 10px;"),
+                                   div(style = "background-color: #e8f4fd; border-left: 4px solid #3498db; border-radius: 0 4px 4px 0; padding: 10px 14px; margin-bottom: 14px;",
+                                       p(icon("hand-pointer"), "Select a tumour region and tissue side above, then",
+                                         strong("click on an LCM spot"), "on the image below to view its copy number profile and haplotype information.",
+                                         style = "font-size: 15px; margin: 0;")
+                                   ),
                                    fluidRow(
                                      column(width = 6,
                                             withSpinner(plotOutput("LCM_plot", height = 1000, width = 1000, click = "plot1_click"))
@@ -187,22 +189,22 @@ ui <- navbarPage("MPNST LCM Explorer",
                             column(width = 6,
                                    fluidRow(
                                      column(width = 10,
-                                            h4("Selected spot information"),
+                                            h3("Selected spot information", style = "font-weight: bold;"),
                                             p("Sample ID, barcode, and localisation details for the selected spot.",
-                                              style = "font-size: 13px; color: #555;"),
+                                              style = "font-size: 15px; color: #333;"),
                                             verbatimTextOutput("click_info"),
-                                            h4("Allele-specific copy number profile"),
+                                            h3("Allele-specific copy number profile", style = "font-weight: bold;"),
                                             p("Heatmap showing the allele-specific copy number state across the genome for the selected spot.
                                               Each column represents a genomic probe, coloured by its copy number state (major + minor allele).",
-                                              style = "font-size: 13px; color: #555;"),
+                                              style = "font-size: 15px; color: #333;"),
                                             withSpinner(plotOutput("spot_CN_plot", height = 100, width = 1000)),
                                             plotOutput("chr_scale_spot", height = 50, width = 1000),
                                             plotOutput("CN_scale_spot", height = 100, width = 1000),
-                                            h4("Haplotype balance"),
+                                            h3("Haplotype balance", style = "font-weight: bold;"),
                                             p("Scatter plot of haplotype 1 vs haplotype 2 read counts for all spots on this tissue section.
                                               The selected spot is highlighted. The black diagonal lines delimit the expected region for
                                               normal diploid samples \u2014 spots falling outside these lines show evidence of haplotype imbalance.",
-                                              style = "font-size: 13px; color: #555;"),
+                                              style = "font-size: 15px; color: #333;"),
                                             withSpinner(plotOutput("genotype_plot", height = 800, width = 800))
                                      )
                                    )
@@ -215,12 +217,12 @@ ui <- navbarPage("MPNST LCM Explorer",
                           ),
                           fluidRow(
                             column(width = 6,
-                                   h4("Allele-specific copy number profiles for all spots in this region"),
-                                   p("The heatmap below shows the allele-specific CN profile for every successfully sequenced spot in the
-                                     selected region. Click on any position in the heatmap to select a genomic segment \u2014 the tissue section
-                                     images below will then display the copy number state at that segment for each spot, showing how it
-                                     varies spatially across the tumour.",
-                                     style = "font-size: 14px; color: #555; margin-bottom: 10px;"),
+                                   h3("Allele-specific copy number profiles for all spots in this region", style = "font-weight: bold;"),
+                                   div(style = "background-color: #e8f4fd; border-left: 4px solid #3498db; border-radius: 0 4px 4px 0; padding: 10px 14px; margin-bottom: 14px;",
+                                       p(icon("hand-pointer"), "The heatmap below shows the allele-specific CN profile for every successfully sequenced spot in the selected region.",
+                                         strong("Click on any position in the heatmap"), "to select a genomic segment \u2014 the tissue section images below will then display the copy number state at that segment for each spot, showing how it varies spatially across the tumour.",
+                                         style = "font-size: 15px; margin: 0;")
+                                   ),
                                    withSpinner(plotOutput("slide_CN_plot", height = 200, width = 1000, click = "plot2_click")),
                                    plotOutput("chr_scale_1", height = 50, width = 1000),
                                    plotOutput("CN_scale_region", height = 100, width = 1000)
