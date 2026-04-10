@@ -18,10 +18,10 @@ regions <- list(c("Primary", "A -Front"),
                 c("R4", "B -Back"),
                 c("R4", "C -Side"))
 
-LCM_coordinates <- readRDS(paste0("LCM_coordinates.rds" ))
+LCM_coordinates <- readRDS("LCM_coordinates.rds")
 LCM_asCN_profile_samples <- readRDS("LCM_CN_available.rds")
-asCN_mtx <- readRDS(paste0("LCM_CN_mtx.rds" ))
-asCN_chr_probes <- readRDS(paste0("LCM_chr_probes.rds"))
+asCN_mtx <- readRDS("LCM_CN_mtx.rds")
+asCN_chr_probes <- readRDS("LCM_chr_probes.rds")
 both_haplo_count_combined_by_cell <- readRDS("LCM_haplotype_info.rds")
 
 haplo_region_map <- c("Primary" = "Primary", "R1" = "T1.1", "R4" = "T4.1")
@@ -38,7 +38,6 @@ spot_status_colours <- c("LCM+WGA Successful" = "springgreen4",
                          "LCM+WGA Unsuccessful" = "deeppink1",
                          "Sequencing Not Performed" = "gray50")
 
-#Image filename lookup (loaded on demand)
 LCM_image_files <- c(
   "Primary_A -Front" = "Primary_12-24POSITIONS_WRITTEN.JPG",
   "Primary_B -Back"  = "Primary_B_OV20X_cut_positions.jpg",
@@ -50,6 +49,7 @@ LCM_image_files <- c(
   "R4_B -Back"       = "T4.1_Back_OV_20x_cut.jpg",
   "R4_C -Side"       = "T4.1_side_OV_cut_20x.jpg"
 )
+
 LCM_image_cache <- new.env(parent = emptyenv())
 
 get_LCM_image <- function(key) {
@@ -59,7 +59,9 @@ get_LCM_image <- function(key) {
   LCM_image_cache[[key]]
 }
 
-#Function for plotting copy number profile
+# Pre-load all images at startup so the first render of each view is fast
+invisible(lapply(names(LCM_image_files), get_LCM_image))
+
 CN_states <- c("0+0" = "royalblue3",
                "1+0" = "skyblue2",
                "2+0" = "grey80",
@@ -74,11 +76,13 @@ CN_states <- c("0+0" = "royalblue3",
                "3+2" = "orangered2",
                ">5" = "purple4")
 as_CN_colour <- c("royalblue3", "skyblue2", "grey80", "white", "lightgoldenrod1", "khaki1", "darkorange3", "darkorange1", "orange", "red4", "red", "orangered2", "purple4")
-as_CN_breaks = c(0,10,20,21,30,31,40,41,42,50,51,52,60,1000)-0.1
+as_CN_breaks <- c(0,10,20,21,30,31,40,41,42,50,51,52,60,1000) - 0.1
+as_CN_labels <- c("0+0", "1+0", "2+0", "1+1", "3+0", "2+1", "4+0", "3+1", "2+2", "5+0", "4+1", "3+2", ">5")
 
 plot_asCN <- function(cell_id, ascn_mtx) {
   pheatmap(mat = ascn_mtx[cell_id,,drop = F], cluster_rows = F, cluster_cols = F,
-                      show_rownames = F, show_colnames = F, color = as_CN_colour, breaks = as_CN_breaks, legend = F, fontsize = 14, main = "MPNST LCM Allele Specific CN Heatmap")
+           show_rownames = F, show_colnames = F, color = as_CN_colour, breaks = as_CN_breaks,
+           legend = F, fontsize = 14, main = "MPNST LCM Allele Specific CN Heatmap")
 }
 
 as_CN_legend <- t(as.matrix(unlist(lapply(2:nrow(asCN_chr_probes), function(c) {
@@ -86,14 +90,16 @@ as_CN_legend <- t(as.matrix(unlist(lapply(2:nrow(asCN_chr_probes), function(c) {
 }))))
 
 plot_chr_scale <- function(asCN_chr_probes, ascn_mtx) {
-  pheatmap(mat = as_CN_legend, cluster_rows = F, cluster_cols = F, show_rownames = F, show_colnames = F, color = c("white", "grey"), legend = F)
+  pheatmap(mat = as_CN_legend, cluster_rows = F, cluster_cols = F,
+           show_rownames = F, show_colnames = F, color = c("white", "grey"), legend = F)
   for (k in asCN_chr_probes$chr[-1]) {
-    grid.text(asCN_chr_probes$chr[k+1], x=asCN_chr_probes$cum.probes[k+1]/ncol(ascn_mtx), y=(k%%2)*0.4+.25, gp=gpar(cex = 1.5), just = "right")
+    grid.text(asCN_chr_probes$chr[k+1], x = asCN_chr_probes$cum.probes[k+1]/ncol(ascn_mtx),
+              y = (k%%2)*0.4+.25, gp = gpar(cex = 1.5), just = "right")
   }
 }
-  
-samples = c("R1", "R2", "R3", "R4", "R5", "P")
-names(samples) = c("26787_8", "30095_2", "30363_3", "30177_3", "30177_4", "30177_2")
+
+samples <- c("R1", "R2", "R3", "R4", "R5", "P")
+names(samples) <- c("26787_8", "30095_2", "30363_3", "30177_3", "30177_4", "30177_2")
 
 region_colours <- c("#B79F00", "#00BA38", "#00BFC4", "#619CFF", "#F564E3", "#F8766D")
 names(region_colours) <- samples
@@ -203,8 +209,7 @@ ui <- navbarPage("MPNST LCM Explorer",
                                    plotOutput("slide_CN_plot", height = 200, width = 1000,
                                               click = "plot2_click"
                                    ),
-                                   plotOutput("chr_scale_1", height = 50, width = 1000,
-                                   ),
+                                   plotOutput("chr_scale_1", height = 50, width = 1000),
                                    plotOutput("CN_scale_region", height = 100, width = 1000)
                             )
                           ),
@@ -221,8 +226,8 @@ ui <- navbarPage("MPNST LCM Explorer",
                           )
                  )
 )
-  
-server <- function(input, output) {
+
+server <- function(input, output, session) {
   ####################################################################################################################################
   #About tab
   ####################################################################################################################################
@@ -234,33 +239,35 @@ server <- function(input, output) {
   #Spot tab reactive values
   ####################################################################################################################################
   LCM_coordinates_reactive <- reactive({
-    LCM_coordinates %>% filter(region == input$spot_region) %>% filter(side == input$spot_side)
+    LCM_coordinates %>% filter(region == input$spot_region, side == input$spot_side)
   })
-  
+
   samples_on_slide_reactive <- reactive({
     LCM_coordinates_reactive() %>% filter(CN_profile == "Yes") %>% pull(sample) %>% as.character()
   })
-  
-  sample_to_plot <- reactive({
-    as.character(nearPoints(LCM_coordinates_reactive(), input$plot1_click, addDist = TRUE, maxpoints = 1, threshold = 10)$sample)
+
+  # Store the clicked spot row; reset when region or side changes so stale
+  # coordinates from a previous view never match spots in the new view.
+  clicked_spot <- reactiveVal(NULL)
+  observeEvent(input$spot_region, clicked_spot(NULL))
+  observeEvent(input$spot_side,   clicked_spot(NULL))
+  observeEvent(input$plot1_click, {
+    pt <- nearPoints(LCM_coordinates_reactive(), input$plot1_click,
+                     addDist = TRUE, maxpoints = 1, threshold = 10)
+    clicked_spot(if (nrow(pt) > 0) pt else NULL)
   })
-  
+
+  selected_sample <- reactive({
+    req(!is.null(clicked_spot()))
+    as.character(clicked_spot()$sample)
+  })
+
   ####################################################################################################################################
   #Spot tab plots
   ####################################################################################################################################
-  observeEvent(input$spot_region, {
-    output$spot_CN_plot <- renderPlot({})
-    output$genotype_plot <- renderPlot({})
-    output$click_info <- renderPrint({})
-  })
 
-  observeEvent(input$spot_side, {
-    output$spot_CN_plot <- renderPlot({})
-    output$genotype_plot <- renderPlot({})
-    output$click_info <- renderPrint({})
-  })
-  
-  output$LCM_plot <- renderPlot({
+  # Tissue image: only depends on region+side — cache across all users
+  output$LCM_plot <- renderCachedPlot({
     LCM_coordinates_reactive() %>%
       ggplot(aes(x = coord.x, y = coord.y, color = spot_status)) +
       annotation_raster(get_LCM_image(paste0(input$spot_region, "_", input$spot_side)),
@@ -269,133 +276,125 @@ server <- function(input, output) {
       scale_color_manual(values = spot_status_colours, drop = FALSE) +
       labs(color = "Spot Status") +
       coord_cartesian(xlim = c(0,100), ylim = c(0,100)) +
-      theme(text=element_text(size=16), legend.position = c(0.85, 0.9),
+      theme(text = element_text(size = 16), legend.position = c(0.85, 0.9),
             legend.background = element_rect(fill = alpha("white", 0.8)),
-            axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(),
-            axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank())
+            axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+            axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank())
+  }, cacheKeyExpr = list(input$spot_region, input$spot_side), cache = "app")
+
+  output$click_info <- renderPrint({
+    pt <- clicked_spot()
+    if (is.null(pt)) cat("No spot selected") else print(pt)
   })
-  
-  observeEvent(input$plot1_click, {
-    selected <- sample_to_plot()
-    
-    if (length(selected) == 0) {
-      output$spot_CN_plot <- renderPlot({})
-      output$genotype_plot <- renderPlot({})
-      output$click_info <- renderPrint({ cat("No spot selected") })
-      return()
-    }
-    
-    output$spot_CN_plot<-renderPlot({
-      if (selected %in% LCM_asCN_profile_samples$sample) {
-        plot_asCN(selected, asCN_mtx)
-      }
-    })
-    
-    output$genotype_plot<-renderPlot({
-      both_haplo_count_combined_by_cell %>% filter(region == haplo_region_map[input$spot_region], side == input$spot_side) %>%
-        mutate(selected = Barcode == selected) %>%
-        ggplot(aes(x=Haplo_1_Count, y=Haplo_2_Count, colour = selected)) + geom_point() + 
-        scale_x_log10(limits = c(1,4000000)) + scale_y_log10(limits = c(1,4000000)) +
-        scale_colour_manual(values = c("TRUE" = "red", "FALSE" = "black"), labels = c("TRUE" = "Selected", "FALSE" = "Other"), name = "Spot") +
-        xlab("Total number of counts of haplotype 1") + ylab("Total number of counts of haplotype 2") +
-        geom_abline(intercept = .5, slope = 1) +
-        geom_abline(intercept = -.5, slope = 1) +
-        theme(plot.title = element_text(size = 30), text=element_text(size=16), aspect.ratio=1)
-    })
-    
-    output$click_info <- renderPrint({
-      nearPoints(LCM_coordinates_reactive(), input$plot1_click, addDist = TRUE, maxpoints = 1, threshold = 10)
-    })
-  })
-  
-  output$chr_scale_spot <- renderPlot({
+
+  # Per-spot CN heatmap: cache by spot ID across all users
+  output$spot_CN_plot <- renderCachedPlot({
+    s <- selected_sample()
+    req(s %in% LCM_asCN_profile_samples$sample)
+    plot_asCN(s, asCN_mtx)
+  }, cacheKeyExpr = list(selected_sample()), cache = "app")
+
+  # Chromosome scale: completely static — render once for the entire app lifetime
+  output$chr_scale_spot <- renderCachedPlot({
     plot_chr_scale(asCN_chr_probes, asCN_mtx)
-  })
-  
-  output$CN_scale_spot <- renderPlot({
-    par(mar=c(1,1,1,1))
-    text(barplot(rep(1,length(as_CN_colour)), col = as_CN_colour, axes = F),
-         .2, c("0+0", "1+0", "2+0", "1+1", "3+0", "2+1", "4+0", "3+1", "2+2", "5+0", "4+1", "3+2", ">5"), 0, cex =1, pos=3)
-  })
-  
+  }, cacheKeyExpr = "chr_scale", cache = "app")
+
+  # CN colour legend: completely static
+  output$CN_scale_spot <- renderCachedPlot({
+    par(mar = c(1,1,1,1))
+    text(barplot(rep(1, length(as_CN_colour)), col = as_CN_colour, axes = F),
+         .2, as_CN_labels, 0, cex = 1, pos = 3)
+  }, cacheKeyExpr = "cn_scale", cache = "app")
+
+  # Haplotype scatter: cache by spot + region + side
+  output$genotype_plot <- renderCachedPlot({
+    s <- selected_sample()
+    both_haplo_count_combined_by_cell %>%
+      filter(region == haplo_region_map[input$spot_region], side == input$spot_side) %>%
+      mutate(selected = Barcode == s) %>%
+      ggplot(aes(x = Haplo_1_Count, y = Haplo_2_Count, colour = selected)) +
+      geom_point() +
+      scale_x_log10(limits = c(1, 4000000)) +
+      scale_y_log10(limits = c(1, 4000000)) +
+      scale_colour_manual(values = c("TRUE" = "red", "FALSE" = "black"),
+                          labels = c("TRUE" = "Selected", "FALSE" = "Other"), name = "Spot") +
+      xlab("Total number of counts of haplotype 1") +
+      ylab("Total number of counts of haplotype 2") +
+      geom_abline(intercept = .5, slope = 1) +
+      geom_abline(intercept = -.5, slope = 1) +
+      theme(plot.title = element_text(size = 30), text = element_text(size = 16), aspect.ratio = 1)
+  }, cacheKeyExpr = list(selected_sample(), input$spot_region, input$spot_side), cache = "app")
+
   ####################################################################################################################################
   #Region tab reactive values
   ####################################################################################################################################
   LCM_coordinates_region_reactive <- reactive({
     LCM_coordinates %>% filter(region == input$region_region)
   })
-  
+
   samples_on_slide_region_reactive <- reactive({
     LCM_coordinates_region_reactive() %>% filter(CN_profile == "Yes") %>% pull(sample) %>% as.character()
   })
-  
-  probe_position_reactive <- reactive({
-    round(input$plot2_click$coords_css$x/1000*ncol(asCN_mtx),digits = 0)
+
+  # Track selected probe position; reset when region changes
+  selected_probe <- reactiveVal(NULL)
+  observeEvent(input$region_region, selected_probe(NULL))
+  observeEvent(input$plot2_click, {
+    selected_probe(round(input$plot2_click$coords_css$x / 1000 * ncol(asCN_mtx), digits = 0))
   })
-  
+
   clicked_CN_reactive <- reactive({
-    LCM_coordinates_region_reactive() %>% left_join(data.frame(sample = samples_on_slide_region_reactive(),
-                                                        Segment_CN = asCN_mtx[samples_on_slide_region_reactive(), probe_position_reactive()]), by = "sample") %>%
-      mutate(asCN = paste0(floor(Segment_CN/10)-(Segment_CN%%10), "+", Segment_CN%%10)) %>%
-      mutate(asCN_plot  = ifelse(Segment_CN >= 60 ,">5",asCN))
+    req(!is.null(selected_probe()))
+    probe   <- selected_probe()
+    samples <- samples_on_slide_region_reactive()
+    LCM_coordinates_region_reactive() %>%
+      left_join(data.frame(sample     = samples,
+                           Segment_CN = asCN_mtx[samples, probe]), by = "sample") %>%
+      mutate(asCN      = paste0(floor(Segment_CN/10) - (Segment_CN%%10), "+", Segment_CN%%10)) %>%
+      mutate(asCN_plot = ifelse(Segment_CN >= 60, ">5", asCN))
   })
-  
+
   ####################################################################################################################################
   #Region tab plots
   ####################################################################################################################################
-  observeEvent(input$region_region, {
-    output$LCM_front <- renderPlot({})
-    output$LCM_side <- renderPlot({})
-    output$LCM_back <- renderPlot({})
-  })
-  
-  observeEvent(input$plot2_click, {
-    output$LCM_front <- renderPlot({
-      clicked_CN_reactive() %>% filter(side == "A -Front") %>%
-        ggplot(aes(x = coord.x, y = coord.y, color = asCN_plot)) +
-        annotation_raster(get_LCM_image(paste0(input$region_region, "_A -Front")),
-                          xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
-        geom_point(size = 10) + scale_color_manual(values = CN_states) +
-        geom_text(aes(label = asCN_plot), size = 8, nudge_x = 3, nudge_y = 3) +
-        coord_cartesian(xlim = c(0,100), ylim = c(0,100)) + theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank(), legend.position = "none")
-    })
-    
-    output$LCM_side <- renderPlot({
-      clicked_CN_reactive() %>% filter(side == "C -Side") %>%
-        ggplot(aes(x = coord.x, y = coord.y, color = asCN_plot)) +
-        annotation_raster(get_LCM_image(paste0(input$region_region, "_C -Side")),
-                          xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
-        geom_point(size = 10) + scale_color_manual(values = CN_states) +
-        geom_text(aes(label = asCN_plot), size = 8, nudge_x = 3, nudge_y = 3) +
-        coord_cartesian(xlim = c(0,100), ylim = c(0,100)) + theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank(), legend.position = "none")
-    })
-    
-    output$LCM_back <- renderPlot({
-      clicked_CN_reactive() %>% filter(side == "B -Back") %>%
-        ggplot(aes(x = coord.x, y = coord.y, color = asCN_plot)) +
-        annotation_raster(get_LCM_image(paste0(input$region_region, "_B -Back")),
-                          xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
-        geom_point(size = 10) + scale_color_manual(values = CN_states) +
-        geom_text(aes(label = asCN_plot), size = 8, nudge_x = 3, nudge_y = 3) +
-        coord_cartesian(xlim = c(0,100), ylim = c(0,100)) + theme(axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank(), axis.title.y=element_blank(), axis.text.y=element_blank(), axis.ticks.y=element_blank(), legend.position = "none")
-    })
-  })
-  
-  output$slide_CN_plot <- renderPlot({
-    plot_asCN(samples_on_slide_region_reactive(), asCN_mtx)
-  })
-  
-  output$chr_scale_1 <- renderPlot({
-    plot_chr_scale(asCN_chr_probes, asCN_mtx)
-  })
 
-  output$CN_scale_region <- renderPlot({
-    par(mar=c(1,1,1,1))
-    text(barplot(rep(1,length(as_CN_colour)), col = as_CN_colour, axes = F),
-         .2, c("0+0", "1+0", "2+0", "1+1", "3+0", "2+1", "4+0", "3+1", "2+2", "5+0", "4+1", "3+2", ">5"), 0, cex =1, pos=3)
-  })
+  # Region CN heatmap: cache by region
+  output$slide_CN_plot <- renderCachedPlot({
+    plot_asCN(samples_on_slide_region_reactive(), asCN_mtx)
+  }, cacheKeyExpr = list(input$region_region), cache = "app")
+
+  output$chr_scale_1 <- renderCachedPlot({
+    plot_chr_scale(asCN_chr_probes, asCN_mtx)
+  }, cacheKeyExpr = "chr_scale", cache = "app")
+
+  output$CN_scale_region <- renderCachedPlot({
+    par(mar = c(1,1,1,1))
+    text(barplot(rep(1, length(as_CN_colour)), col = as_CN_colour, axes = F),
+         .2, as_CN_labels, 0, cex = 1, pos = 3)
+  }, cacheKeyExpr = "cn_scale", cache = "app")
+
+  # Helper: tissue section overlay for a given side, cached by region + probe + side
+  make_region_plot <- function(side_label) {
+    renderCachedPlot({
+      req(!is.null(selected_probe()))
+      clicked_CN_reactive() %>% filter(side == side_label) %>%
+        ggplot(aes(x = coord.x, y = coord.y, color = asCN_plot)) +
+        annotation_raster(get_LCM_image(paste0(input$region_region, "_", side_label)),
+                          xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
+        geom_point(size = 10) +
+        scale_color_manual(values = CN_states) +
+        geom_text(aes(label = asCN_plot), size = 8, nudge_x = 3, nudge_y = 3) +
+        coord_cartesian(xlim = c(0,100), ylim = c(0,100)) +
+        theme(axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+              axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+              legend.position = "none")
+    }, cacheKeyExpr = list(input$region_region, selected_probe(), side_label), cache = "app")
+  }
+
+  output$LCM_front <- make_region_plot("A -Front")
+  output$LCM_side  <- make_region_plot("C -Side")
+  output$LCM_back  <- make_region_plot("B -Back")
 }
 
-#Run Shiny app
 graphics.off()
 shinyApp(ui = ui, server = server)
