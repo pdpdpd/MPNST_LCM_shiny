@@ -373,21 +373,38 @@ server <- function(input, output, session) {
          .2, as_CN_labels, 0, cex = 1, pos = 3)
   }, cacheKeyExpr = "cn_scale", cache = "app")
 
-  # Helper: tissue section overlay for a given side, cached by region + probe + side
+  # Helper: tissue section overlay for a given side, cached by region + probe + side.
+  # Before any heatmap click: shows spots coloured by sequencing status so images
+  # appear immediately on page load.  After a click: switches to CN state overlay.
   make_region_plot <- function(side_label) {
     renderCachedPlot({
-      req(!is.null(selected_probe()))
-      clicked_CN_reactive() %>% filter(side == side_label) %>%
-        ggplot(aes(x = coord.x, y = coord.y, color = asCN_plot)) +
-        annotation_raster(get_LCM_image(paste0(input$region_region, "_", side_label)),
-                          xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
-        geom_point(size = 10) +
-        scale_color_manual(values = CN_states) +
-        geom_text(aes(label = asCN_plot), size = 8, nudge_x = 3, nudge_y = 3) +
-        coord_cartesian(xlim = c(0,100), ylim = c(0,100)) +
-        theme(axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(),
-              axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank(),
-              legend.position = "none")
+      img <- get_LCM_image(paste0(input$region_region, "_", side_label))
+      base_theme <- theme(
+        axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+        legend.position = "none"
+      )
+
+      if (is.null(selected_probe())) {
+        # No probe selected yet — show spot status so images are visible on load
+        LCM_coordinates_region_reactive() %>% filter(side == side_label) %>%
+          ggplot(aes(x = coord.x, y = coord.y, color = spot_status)) +
+          annotation_raster(img, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
+          geom_point(size = 10) +
+          scale_color_manual(values = spot_status_colours, drop = FALSE) +
+          coord_cartesian(xlim = c(0,100), ylim = c(0,100)) +
+          base_theme
+      } else {
+        # Probe selected — overlay CN state at the clicked genomic position
+        clicked_CN_reactive() %>% filter(side == side_label) %>%
+          ggplot(aes(x = coord.x, y = coord.y, color = asCN_plot)) +
+          annotation_raster(img, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
+          geom_point(size = 10) +
+          scale_color_manual(values = CN_states) +
+          geom_text(aes(label = asCN_plot), size = 8, nudge_x = 3, nudge_y = 3) +
+          coord_cartesian(xlim = c(0,100), ylim = c(0,100)) +
+          base_theme
+      }
     }, cacheKeyExpr = list(input$region_region, selected_probe(), side_label), cache = "app")
   }
 
