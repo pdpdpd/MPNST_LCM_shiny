@@ -283,14 +283,14 @@ server <- function(input, output, session) {
 
   # Tissue image: only depends on region+side — cache across all users
   output$LCM_plot <- renderCachedPlot({
+    img <- get_LCM_image(paste0(input$spot_region, "_", input$spot_side))
     LCM_coordinates_reactive() %>%
       ggplot(aes(x = coord.x, y = coord.y, color = spot_status)) +
-      annotation_raster(get_LCM_image(paste0(input$spot_region, "_", input$spot_side)),
-                        xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
+      annotation_raster(img, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
       geom_point(size = 10) +
       scale_color_manual(values = spot_status_colours, drop = FALSE) +
       labs(color = "Spot Status") +
-      coord_cartesian(xlim = c(0,100), ylim = c(0,100)) +
+      coord_fixed(ratio = nrow(img) / ncol(img), xlim = c(0, 100), ylim = c(0, 100)) +
       theme(text = element_text(size = 16), legend.position = c(0.85, 0.9),
             legend.background = element_rect(fill = alpha("white", 0.8)),
             axis.title.x = element_blank(), axis.text.x = element_blank(), axis.ticks.x = element_blank(),
@@ -400,6 +400,8 @@ server <- function(input, output, session) {
         legend.position = "none"
       )
 
+      aspect <- nrow(img) / ncol(img)
+
       if (is.null(selected_probe())) {
         # No probe selected yet — show spot status so images are visible on load
         LCM_coordinates_region_reactive() %>% filter(side == side_label) %>%
@@ -407,7 +409,7 @@ server <- function(input, output, session) {
           annotation_raster(img, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf) +
           geom_point(size = 10) +
           scale_color_manual(values = spot_status_colours, drop = FALSE) +
-          coord_cartesian(xlim = c(0,100), ylim = c(0,100)) +
+          coord_fixed(ratio = aspect, xlim = c(0, 100), ylim = c(0, 100)) +
           base_theme
       } else {
         # Probe selected — overlay CN state at the clicked genomic position
@@ -418,7 +420,7 @@ server <- function(input, output, session) {
           scale_color_manual(values = CN_states) +
           geom_label(aes(label = asCN_plot), size = 6, nudge_x = 3, nudge_y = 3,
                      color = "black", fill = "white", alpha = 0.75, label.size = 0.2) +
-          coord_cartesian(xlim = c(0,100), ylim = c(0,100)) +
+          coord_fixed(ratio = aspect, xlim = c(0, 100), ylim = c(0, 100)) +
           base_theme
       }
     }, cacheKeyExpr = list(input$region_region, selected_probe(), side_label), cache = "app", res = 96)
