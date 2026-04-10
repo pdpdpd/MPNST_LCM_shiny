@@ -34,8 +34,8 @@ if (!requireNamespace("rsconnect", quietly = TRUE)) {
 }
 
 # Install all app dependencies so they are captured in manifest.json
-app_packages <- c("shiny", "shinydashboard", "ggplot2", "dplyr",
-                  "magrittr", "pheatmap", "jpeg", "grid")
+app_packages <- c("shiny", "shinydashboard", "shinycssloaders", "ggplot2", "dplyr",
+                  "magrittr", "pheatmap", "jpeg", "grid", "cachem")
 missing_pkgs <- app_packages[!sapply(app_packages, requireNamespace, quietly = TRUE)]
 if (length(missing_pkgs) > 0) {
   message("Installing missing packages: ", paste(missing_pkgs, collapse = ", "))
