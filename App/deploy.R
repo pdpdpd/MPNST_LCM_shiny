@@ -12,6 +12,9 @@ local_lib <- Sys.getenv("R_LIBS_USER", unset = file.path(Sys.getenv("HOME"), "R"
 if (!dir.exists(local_lib)) dir.create(local_lib, recursive = TRUE)
 if (!local_lib %in% .libPaths()) .libPaths(c(local_lib, .libPaths()))
 
+# Set CRAN mirror
+options(repos = c(CRAN = "https://cran.rstudio.com"))
+
 # Install rsconnect if needed
 if (!requireNamespace("rsconnect", quietly = TRUE)) {
   install.packages("rsconnect", lib = local_lib)
