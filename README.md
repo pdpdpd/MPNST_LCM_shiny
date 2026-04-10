@@ -2,7 +2,8 @@
 ## Original code and design from Haixi Yan (haixi.yan@crick.ac.uk)
 
 Interactive Shiny app for exploring spatial copy number heterogeneity in a malignant peripheral nerve sheath tumour (MPNST) through laser capture microdissection (LCM).
-
+Now published at https://vanloo-lab-mpnst-lcm-shiny.share.connect.posit.cloud.
+ 
 ## App features
 
 - **LCM Spot tab** — Select a tumour region and tissue section orientation (Front/Back/Side), click individual LCM spots to view their allele-specific copy number profile and haplotype balance.
