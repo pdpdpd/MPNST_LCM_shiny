@@ -7,9 +7,14 @@
 #   setwd("App/")
 #   source("deploy.R")
 
+# Use a local library directory if the system library is not writable
+local_lib <- Sys.getenv("R_LIBS_USER", unset = file.path(Sys.getenv("HOME"), "R", "library"))
+if (!dir.exists(local_lib)) dir.create(local_lib, recursive = TRUE)
+if (!local_lib %in% .libPaths()) .libPaths(c(local_lib, .libPaths()))
+
 # Install rsconnect if needed
 if (!requireNamespace("rsconnect", quietly = TRUE)) {
-  install.packages("rsconnect")
+  install.packages("rsconnect", lib = local_lib)
 }
 
 library(rsconnect)
